@@ -37,7 +37,7 @@ For example when we load the Amazon Reviews demo, it uses the table:
 /var/www/ramdb/live/RAMDB.Row64/Examples/AmazonReviews.ramdb
 
 
-You can see the sub-folders tell server about the table:
+You can see the sub-folders tell the server about the table:
 
 
 ```
