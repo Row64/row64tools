@@ -131,7 +131,7 @@ Loading .ramdb files
 You can also load and run diagnostics on .ramdb files.
 
 
-row64tools also include a .ramdb for testing in the function .load_to_json
+row64tools also include a .ramdb for testing in the function .example_path()
 
 
 In this example we load and run diagnostics with: json, pandas dataframe, and numpy:
