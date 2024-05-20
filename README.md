@@ -38,7 +38,7 @@ Here's an example:
 
 ```
 import pandas as pd
-from ramdb import ramdb
+from row64tools import ramdb
 
 data = {
   "tier": [4, 2, 1],
@@ -50,8 +50,7 @@ data = {
 df = pd.DataFrame(data)
 df["sign up"] = pd.to_datetime(df["sign up"])
 
-rdb = ramdb()
-rdb.save_from_df(df, "c:\\Temp\\testSave.ramdb")
+ramdb.save_from_df(df, "c:\\Temp\\testSave.ramdb")
 ```
 
 
