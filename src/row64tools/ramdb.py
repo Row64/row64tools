@@ -6,6 +6,7 @@ import io
 import os
 import pathlib
 from row64tools import bytestream
+import math
 
 i64step = 8
 i32step = 4
@@ -30,49 +31,87 @@ def save_from_df(inDf, inPath, inFormats=[]):
 	cMintPos = 0
 	cSize = [] # the max width of the column in bytes
 	cTypes = [] # type of column in FRAD int format
+
+	# NOTE: bytestream is little-endian targeting x86 and ARM chips
+	# Python .fromhex is big-endian so we flip any sentinal NULL value to feed the bytes correctly
 	for col in inDf.columns:
 		if inDf[col].dtype=="int64":
 			dSize = inDf[col].abs().ge(2 ** 32).to_numpy().any()
 			if not dSize:inDf[col]=inDf[col].astype("int32")
 		if inDf[col].dtype=="bool":
-			for item in inDf[col]:cTile += bytearray(struct.pack('i', item))
+			for item in inDf[col] : 
+				cTile += bytearray(struct.pack('i', item))
 			cTypes.append(2)
 			cSize.append(4)
-		elif inDf[col].dtype=="int32":
-			for item in inDf[col]:cTile += bytearray(struct.pack('i', item))
+		elif inDf[col].dtype=="int32" or inDf[col].dtype=="Int32":
+			for item in inDf[col]:
+				if pd.isnull(item):
+					cTile += bytes.fromhex("00000080")  # 0x80000000 sentinal NULL value
+				else:
+					cTile += bytearray(struct.pack('i', item))
 			cTypes.append(2)
 			cSize.append(4)
-		elif inDf[col].dtype=="int64":
-			for item in inDf[col]:cTile += bytearray(struct.pack('q', item))
+		elif inDf[col].dtype=="int64" or inDf[col].dtype=="Int64":
+			for item in inDf[col]:
+				if pd.isnull(item):
+					cTile += bytes.fromhex("0000000000000080")  # 0x8000000000000000 sentinal NULL value
+				else:
+					cTile += bytearray(struct.pack('q', item))
 			cTypes.append(3)
 			cSize.append(8)
+		elif inDf[col].dtype=="float32":
+			for item in inDf[col]:
+				if pd.isnull(item) :
+					cTile += bytes.fromhex("FFFFFFFF")  # 0xFFFFFFFF sentinal NULL value
+				else: 
+					cTile += bytearray(struct.pack('f', item))
+			cTypes.append(4)
+			cSize.append(8)
 		elif inDf[col].dtype=="float64":
-			for item in inDf[col]:cTile += bytearray(struct.pack('d', item))
+			for item in inDf[col]:
+				if pd.isnull(item) : 
+					cTile += bytes.fromhex("FFFFFFFFFFFFFFFF")  # 0xFFFFFFFFFFFFFFFF sentinal NULL value
+				else : 
+					cTile += bytearray(struct.pack('d', item))
 			cTypes.append(5)
 			cSize.append(8)
 		elif(str(inDf[col].dtype)[:10] == "datetime64" ):
 			dtArr = inDf[col].astype("datetime64[ns]")
 			dtArr = dtArr.astype(np.int64)
-			for item in dtArr:cTile += bytearray(struct.pack('q', item))
+			for item in dtArr : 
+				if pd.isnull(item):
+					cTile += bytes.fromhex("0000000000000080")  # 0x8000000000000000 sentinal NULL value
+				else:
+					cTile += bytearray(struct.pack('q', item))
 			cTypes.append(20)
 			cSize.append(8)
 		elif(str(inDf[col].dtype)[:11] == "timedelta64" ):
 			dtArr = inArr.astype("timedelta64[ns]")
 			dtArr = dtArr.astype(np.int64)
-			for item in dtArr:cTile += bytearray(struct.pack('q', item))
-			cTypes.append(21)
+			for item in dtArr : 
+				if pd.isnull(item):
+					cTile += bytes.fromhex("0000000000000080")  # 0x8000000000000000 sentinal NULL value
+				else:
+					cTile += bytearray(struct.pack('q', item))
+			cTypes.append(3) # convert to int64
 			cSize.append(8)
 		else:
 			maxLen=1;
 			lenBuf = bytearray()
 			for item in inDf[col]:
-				eItem = item.encode('ascii')
-				iLen = len(eItem);
-				if iLen > maxLen:maxLen=iLen
-				cMint+=eItem
-				cTile += bytearray(struct.pack('Q', cMintPos)) #uint 64 
-				lenBuf += bytearray(struct.pack('H', iLen)) #uint 16
-				cMintPos+=len(eItem)
+				if pd.isnull(item) or pd.isna(item):
+					# Ingest NaN or Null string value into "" blank zero length string
+					# We do have NULL strings in Row64 but we follow the ingest conventions of Row64 Studio
+					cTile += bytearray(struct.pack('Q', cMintPos)) #uint 64 
+					lenBuf += bytearray(struct.pack('H', 0)) #uint 16
+				else:
+					eItem = item.encode('ascii')
+					iLen = len(eItem);					
+					if iLen > maxLen:maxLen=iLen
+					cMint+=eItem
+					cTile += bytearray(struct.pack('Q', cMintPos)) #uint 64 
+					lenBuf += bytearray(struct.pack('H', iLen)) #uint 16
+					cMintPos+=iLen
 			cTile+= lenBuf
 			cTypes.append(6)
 			cSize.append(maxLen)
