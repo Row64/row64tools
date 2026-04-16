@@ -18,7 +18,7 @@ from row64tools import ramdb
 
 data = {"txt": ["a","b", "c"],"num": [1, 2, 3]}
 df = pd.DataFrame(data)
-ramdb.save_from_df(df, "c:\\Temp\\testSave.ramdb")
+ramdb.save_from_df(df, "/home/row64/Downloads/testSave.ramdb")
 ```
 
 
@@ -50,7 +50,7 @@ data = {
 df = pd.DataFrame(data)
 df["sign up"] = pd.to_datetime(df["sign up"])
 
-ramdb.save_from_df(df, "c:\\Temp\\testSave.ramdb")
+ramdb.save_from_df(df, "/home/row64/Downloads/testSave.ramdb")
 ```
 
 
@@ -116,7 +116,7 @@ Path("/var/www/ramdb/loading/RAMDB.Row64/Temp").mkdir(parents=True, exist_ok=Tru
 ramdb.save_from_df(df, "/var/www/ramdb/loading/RAMDB.Row64/Temp/Test.ramdb")
 ```
 
-The server will check every minute or so for changes.  If you run the example while the server is running you'll see the file in:
+The server will check every minute or so for changes.  The frequency of update is based on your .config file RAMDB_UPDATE setting.  If you run the example while the server is running you'll see the file in:
 
 /var/www/ramdb/loading/RAMDB.Row64/Temp/Test.ramdb
 
