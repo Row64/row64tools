@@ -1,0 +1,19 @@
+FunctionArgTypes = {
+	"invalid":0,
+	"bool":1,
+	"int":2,
+	"num":3,
+	"string":4,
+	"file":5,
+	"folder":6,
+	"date":7,
+	"col":8,
+	"cell":9,
+	"df":10,
+	"dfcol":11,
+	"filecol":12,
+	"json":13,
+	"list":14,
+	"formula":15,
+	"link":16
+}

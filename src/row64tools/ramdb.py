@@ -5,12 +5,14 @@ import pandas as pd
 import io
 import os
 import pathlib
-from row64tools import bytestream
+from row64tools.bytestream import bytestream as bStream
+
 import math
 
 i64step = 8
 i32step = 4
 i16step = 2
+
 i8step = 1
 
 BasicNames = ["null","int","bigint","float","bigfloat","text"]
@@ -21,7 +23,7 @@ ColumnTypes = ["drop","null","int","bigint","float","bigfloat","text","image","l
 def save_from_df(inDf, inPath, inFormats=[]):
 	inDf = inDf.infer_objects()
 	cLen = len(inDf.columns)
-	bs = bytestream.bytestream()
+	bs = bStream()
 	bs.add_string("Name","")
 	bs.add_int64("NbCols",cLen)
 	bs.add_int64("NbRows",len(inDf))
@@ -105,7 +107,7 @@ def save_from_df(inDf, inPath, inFormats=[]):
 					cTile += bytearray(struct.pack('Q', cMintPos)) #uint 64 
 					lenBuf += bytearray(struct.pack('H', 0)) #uint 16
 				else:
-					eItem = item.encode('ascii')
+					eItem = str(item).encode('ascii')
 					iLen = len(eItem);					
 					if iLen > maxLen:maxLen=iLen
 					cMint+=eItem
@@ -124,7 +126,7 @@ def save_from_df(inDf, inPath, inFormats=[]):
 	bs.save(inPath)
 
 def log(inPath):
-	bs = bytestream.bytestream()
+	bs = bStream()
 	bs.read( inPath )
 	bs.log_info()
 
@@ -135,7 +137,7 @@ def example_path():
 	return fPath
 
 def load_to_df(inPath): # load to dataframe
-	bs = bytestream.bytestream()
+	bs = bStream()
 	bs.read( inPath )
 	FName = bs.get_string("Name")
 	NbCols = bs.get_int64("NbCols")
@@ -143,7 +145,11 @@ def load_to_df(inPath): # load to dataframe
 	ColNames = bs.get_string_vector("ColNames")
 	ColTypes = bs.get_int32_vector("ColTypes")
 	ColSizes = bs.get_int32_vector("ColSizes")
-	ColFormat = bs.get_string_vector("ColFormat")
+	ColFormat = []
+	if bs.key_exists("ColFormat"):
+		if bs.get_type("ColFormat") == 28: # 28 = string_vector
+			ColFormat = bs.get_string_vector("ColFormat")
+			# todo: integrate # 54 = stream_vector
 	kInd = bs.get_key_ind("cTile","FRAD.Read",-1)
 	kInd2 = bs.get_key_ind("cMint","FRAD.Read",-1)
 	if(kInd==-1 or kInd2==-1):return
@@ -185,14 +191,18 @@ def load_to_df(inPath): # load to dataframe
 	return fdf
 
 def load_to_np(inPath): # load to object structure with numpy columns
-	bs = bytestream.bytestream()
+	bs = bStream()
 	bs.read( inPath )
 	NbCols = bs.get_int64("NbCols")
 	NbRows = bs.get_int64("NbRows")
 	ColNames = bs.get_string_vector_np("ColNames")
 	ColTypes = bs.get_int32_vector_np("ColTypes")
 	ColSizes = bs.get_int32_vector_np("ColSizes")
-	ColFormat = bs.get_string_vector_np("ColFormat")
+	ColFormat = []
+	if bs.key_exists("ColFormat"):
+		if bs.get_type("ColFormat") == 28: # 28 = string_vector
+			ColFormat = bs.get_string_vector_np("ColFormat")
+		# todo: integrate # 54 = stream_vector
 	kInd = bs.get_key_ind("cTile","FRAD.Read",-1)
 	kInd2 = bs.get_key_ind("cMint","FRAD.Read",-1)
 	if(kInd==-1 or kInd2==-1):return
@@ -228,14 +238,18 @@ def load_to_np(inPath): # load to object structure with numpy columns
 	return rtnObj
 
 def load_to_json(inPath): # load to json string, useful for a quick look at the data
-	bs = bytestream.bytestream()
+	bs = bStream()
 	bs.read( inPath )
 	NbCols = bs.get_int64("NbCols")
 	NbRows = bs.get_int64("NbRows")
 	ColNames = bs.get_string_vector("ColNames")
 	ColTypes = bs.get_int32_vector("ColTypes")
 	ColSizes = bs.get_int32_vector("ColSizes")
-	ColFormat = bs.get_string_vector("ColFormat")
+	ColFormat = []
+	if bs.key_exists("ColFormat"):
+		if bs.get_type("ColFormat") == 28: # 28 = string_vector
+			ColFormat = bs.get_string_vector_np("ColFormat")
+		# todo: integrate # 54 = stream_vector
 	kInd = bs.get_key_ind("cTile","FRAD.Read",-1)
 	kInd2 = bs.get_key_ind("cMint","FRAD.Read",-1)
 	if(kInd==-1 or kInd2==-1):return

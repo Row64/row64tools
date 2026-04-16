@@ -223,9 +223,11 @@ class bytestream:
             elif(eType >= 35 and eType <= 45): # 2D _vector
                 b = self.EL[i][0]
                 len1 = str(struct.unpack('Q', self.B[b:b+i64step])[0])
-                b+=i64step
-                len2 = str(struct.unpack('Q', self.B[b:b+i64step])[0])
-                print("Key:",self.keys[i] + ",","Type:",dType+",","Len:["+str(len1)+","+str(len2)+"]","Bytes:",byteLen)
+                if len1 == "0":print("Key:",self.keys[i] + ",","Type:",dType+",","Len:"+str(len1)+", Bytes:",byteLen)
+                else:
+                    b+=i64step
+                    len2 = str(struct.unpack('Q', self.B[b:b+i64step])[0])
+                    print("Key:",self.keys[i] + ",","Type:",dType+",","Len:["+str(len1)+","+str(len2)+"]","Bytes:",byteLen)
             elif(eType >= 52 and eType <= 53): # buffer or stream
                 print("Key:",self.keys[i] + ",","Type:",dType+",","Bytes:",byteLen)
             elif(eType ==54): # _vector of Streams
@@ -403,6 +405,7 @@ class bytestream:
         elif(t==52):gDat=self.get_buffer(inKey) # ----- Buffer 
         elif(t==53):gDat=self.get_stream(inKey)
         elif(t==54):gDat=self.get_stream_vector(inKey)
+        elif(t==55):gDat=self.get_buffer_vector(inKey)
         return gDat
 
     ###################################### GET SINGLE VALUE #####################################
@@ -695,6 +698,7 @@ class bytestream:
         return np.array(sList)
 
     def get_stream_vector(self, inKey):
+
         kInd = self.get_key_ind(inKey,"get_stream_vector",54)
         if(kInd==-1):return
         b = self.EL[kInd][0]
@@ -707,7 +711,21 @@ class bytestream:
         sList = []
         for s in range(iCount):sList.append(self.B[sIndList[s]+b:sIndList[s+1]+b])
         return sList
-
+    
+    def get_buffer_vector(self, inKey):
+        kInd = self.get_key_ind(inKey,"get_buffer_vector",55)
+        if(kInd==-1):return
+        b = self.EL[kInd][0]
+        iCount = struct.unpack('Q', self.B[b:b+i64step])[0]
+        b+=i64step
+        sIndList = []
+        for s in range(iCount+1):
+            sIndList.append(struct.unpack('Q', self.B[b:b+i64step])[0])
+            b+=i64step
+        sList = []
+        for s in range(iCount):
+            sList.append(self.B[sIndList[s]+b:sIndList[s+1]+b])
+        return sList
 
     ####################################### GET 2D VECTORS #######################################
 
@@ -824,7 +842,7 @@ class bytestream:
                 b+=i32step
             valList.append(subList)
         return valList
-
+    
     def get_int64_vector2d(self, inKey):
         kInd = self.get_key_ind(inKey,"get_int64_vector2d",41)
         if(kInd==-1):return
@@ -1227,6 +1245,23 @@ class bytestream:
         bar += endBuf
         self.bufList.append(bar)
         self.lenList.append(len(bar))
+
+    def add_buffer_vector(self, inKey, inBufList):
+        bar = bytearray()
+        keySize = bytearray(struct.pack('Q', len(inKey))) 
+        bType = bytearray(struct.pack('B', 55)) # buffer vector
+        bar += bType + keySize + inKey.encode('ascii')
+        bar += bytearray(struct.pack('Q', len(inBufList))) # count
+        endBuf = bytearray()
+        sPos = 0
+        for item in inBufList:
+            bar += bytearray(struct.pack('Q', sPos)) # sub count
+            sPos += len(item)
+            endBuf+=item
+        bar += bytearray(struct.pack('Q', sPos))
+        bar += endBuf
+        self.bufList.append(bar)
+        self.lenList.append(len(bar))
     
     ####################################### ADD VECTOR 2D #######################################
 
@@ -1441,6 +1476,7 @@ bytestream_types = [
     "mat2_vector2d", "mat3_vector2d", "mat4_vector2d",
     "buffer",
     "stream", "stream_vector",
+    "buffer_vector", 
     "table",
     "json",
     "last"
@@ -1502,7 +1538,8 @@ bytestream_types = [
 # 52 = buffer
 # 53 = stream
 # 54 = stream_vector
-# 55 = table
-# 56 = json
-# 57 = last
+# 55 = buffer_vector
+# 56 = table
+# 57 = json
+# 58 = last
 
